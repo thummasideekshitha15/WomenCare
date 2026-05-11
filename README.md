@@ -1,5 +1,5 @@
 <div align="center">
-<img src="📚 docs/ assets/layout.jpg" alt="Women Auto Safety Bracelet System" width="100%">
+<img src="📚 docs/assets/layout.jpg" alt="Women Auto Safety Bracelet System" width="100%">
 
 # 🛡️ Women Auto Safety Bracelet System
 
