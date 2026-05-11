@@ -1,0 +1,400 @@
+[
+    {
+        "id": "cad66e594620ddab",
+        "type": "tab",
+        "label": "Mygirl Safety Bot",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "5bdf95c17883ba7a",
+        "type": "inject",
+        "z": "cad66e594620ddab",
+        "name": "⏱ Poll Firebase every 5m",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 80,
+        "wires": [
+            [
+                "7b8653858e88e6b9"
+            ]
+        ]
+    },
+    {
+        "id": "7b8653858e88e6b9",
+        "type": "http request",
+        "z": "cad66e594620ddab",
+        "name": "GET Firebase State",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://women-safety-d12d5-default-rtdb.firebaseio.com/threat_detect.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 390,
+        "y": 80,
+        "wires": [
+            [
+                "55b46d976e749242"
+            ]
+        ]
+    },
+    {
+        "id": "55b46d976e749242",
+        "type": "function",
+        "z": "cad66e594620ddab",
+        "name": "🔍 Check if threat active",
+        "func": "// Read the full threat_detect object\nconst data = msg.payload;\n\nif (!data || data.state !== true) {\n    // Not a threat — do nothing\n    return null;\n}\n\n// Store full data for next nodes\nmsg.threatData = data;\nmsg.state       = data.state;\nmsg.lat         = data.live_location ? data.live_location.lat : null;\nmsg.lng         = data.live_location ? data.live_location.lng : null;\nmsg.accuracy    = data.live_location ? data.live_location.accuracy : null;\nmsg.mapsLink    = data.live_location ? data.live_location.maps_link : null;\nmsg.timestamp   = data.live_location ? data.live_location.timestamp : 'Unknown';\nmsg.audioUrl    = data.latest_audio  || null;\nmsg.photoUrl    = data.latest_photo  || null;\nmsg.seconds     = data.seconds_active || 0;\nmsg.lastUpload  = data.last_upload_time || 'Unknown';\n\n// Only send alert if we have at least a location\nif (!msg.lat) {\n    node.warn('No location yet');\n    return null;\n}\n\nnode.status({fill:'red', shape:'dot', text:'🚨 THREAT ACTIVE'});\nreturn msg;",
+        "outputs": 1,
+        "x": 650,
+        "y": 100,
+        "wires": [
+            [
+                "c88b752c08ee411f"
+            ]
+        ]
+    },
+    {
+        "id": "c88b752c08ee411f",
+        "type": "function",
+        "z": "cad66e594620ddab",
+        "name": "📍 Send Location Pin",
+        "func": "const CHAT_ID = '-5148615810';\n\nif (!msg.lat || !msg.lng) return null;\n\nmsg.payload = {\n    chatId: CHAT_ID,\n    type: 'location',\n    content: {\n        latitude:  msg.lat,\n        longitude: msg.lng\n    }\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 940,
+        "y": 140,
+        "wires": [
+            [
+                "5780c5d37416effd"
+            ]
+        ]
+    },
+    {
+        "id": "08c6855682033c23",
+        "type": "function",
+        "z": "cad66e594620ddab",
+        "name": "📸 Send Photo",
+        "func": "const CHAT_ID = '-5295226131';\n\nif (!msg.photoUrl) {\n    node.warn('No photo URL yet');\n    return null;\n}\n\n// Telegram can send photo directly from URL\nmsg.payload = {\n    chatId: CHAT_ID,\n    type: 'photo',\n    content: msg.photoUrl,\n    options: {\n        caption: `📸 Latest capture\\n🕐 ${msg.timestamp}`\n    }\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 220,
+        "wires": [
+            [
+                "81ffcd024b9b0a1d"
+            ]
+        ]
+    },
+    {
+        "id": "5780c5d37416effd",
+        "type": "telegram sender",
+        "z": "cad66e594620ddab",
+        "name": "📍 Telegram Location",
+        "bot": "125cd4d5d7f3928e",
+        "haserroroutput": false,
+        "outputs": 1,
+        "x": 1180,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "81ffcd024b9b0a1d",
+        "type": "telegram sender",
+        "z": "cad66e594620ddab",
+        "name": "📸 Telegram Photo",
+        "bot": "49418bae1a20d70a",
+        "haserroroutput": false,
+        "outputs": 1,
+        "x": 1170,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e7d819a9029b99d4",
+        "type": "debug",
+        "z": "cad66e594620ddab",
+        "name": "Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 810,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "2a3e48f3807ca650",
+        "type": "function",
+        "z": "cad66e594620ddab",
+        "name": "audio",
+        "func": "const CHAT_ID = '-5298442134';\n\nconst audioUrl = msg.payload.latest_audio || 'No audio yet';\nconst photoUrl = msg.payload.latest_photo || 'No photo yet';\nconst lat      = msg.payload.live_location ? msg.payload.live_location.lat : 'N/A';\nconst lng      = msg.payload.live_location ? msg.payload.live_location.lng : 'N/A';\nconst mapsLink = msg.payload.live_location ? msg.payload.live_location.maps_link : 'N/A';\nconst time     = msg.payload.last_upload_time || 'N/A';\n\nmsg.payload = {\n    chatId: CHAT_ID,\n    type: 'message',\n    content:\n        '🚨 WOMEN SAFETY ALERT!\\n\\n' +\n        '🎤 Audio: ' + audioUrl + '\\n\\n' +\n        '📸 Photo: ' + photoUrl + '\\n\\n' +\n        '📍 Location: ' + lat + ', ' + lng + '\\n' +\n        '🗺 Maps: ' + mapsLink + '\\n\\n' +\n        '🕐 Time: ' + time\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 320,
+        "wires": [
+            [
+                "49dbf177afe5dabb"
+            ]
+        ]
+    },
+    {
+        "id": "49dbf177afe5dabb",
+        "type": "telegram sender",
+        "z": "cad66e594620ddab",
+        "name": "",
+        "bot": "21398e541a4676e8",
+        "haserroroutput": false,
+        "outputs": 1,
+        "x": 1170,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3f5d4bd804ad032e",
+        "type": "inject",
+        "z": "cad66e594620ddab",
+        "name": "⏱ Poll Firebase every 15s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "15",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "9e584499a8e5d804"
+            ]
+        ]
+    },
+    {
+        "id": "9e584499a8e5d804",
+        "type": "http request",
+        "z": "cad66e594620ddab",
+        "name": "GET Firebase State",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://women-safety-d12d5-default-rtdb.firebaseio.com/threat_detect.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 390,
+        "y": 200,
+        "wires": [
+            [
+                "8811be74e88da273"
+            ]
+        ]
+    },
+    {
+        "id": "8811be74e88da273",
+        "type": "function",
+        "z": "cad66e594620ddab",
+        "name": "🔍 Check if threat active",
+        "func": "// Read the full threat_detect object\nconst data = msg.payload;\n\nif (!data || data.state !== true) {\n    // Not a threat — do nothing\n    return null;\n}\n\n// Store full data for next nodes\nmsg.threatData = data;\nmsg.state       = data.state;\nmsg.lat         = data.live_location ? data.live_location.lat : null;\nmsg.lng         = data.live_location ? data.live_location.lng : null;\nmsg.accuracy    = data.live_location ? data.live_location.accuracy : null;\nmsg.mapsLink    = data.live_location ? data.live_location.maps_link : null;\nmsg.timestamp   = data.live_location ? data.live_location.timestamp : 'Unknown';\nmsg.audioUrl    = data.latest_audio  || null;\nmsg.photoUrl    = data.latest_photo  || null;\nmsg.seconds     = data.seconds_active || 0;\nmsg.lastUpload  = data.last_upload_time || 'Unknown';\n\n// Only send alert if we have at least a location\nif (!msg.lat) {\n    node.warn('No location yet');\n    return null;\n}\n\nnode.status({fill:'red', shape:'dot', text:'🚨 THREAT ACTIVE'});\nreturn msg;",
+        "outputs": 1,
+        "x": 630,
+        "y": 200,
+        "wires": [
+            [
+                "08c6855682033c23"
+            ]
+        ]
+    },
+    {
+        "id": "8f1eeda50d4cd2cf",
+        "type": "inject",
+        "z": "cad66e594620ddab",
+        "name": "⏱ Poll Firebase every 10s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 300,
+        "wires": [
+            [
+                "dcc579996bd42b89"
+            ]
+        ]
+    },
+    {
+        "id": "dcc579996bd42b89",
+        "type": "http request",
+        "z": "cad66e594620ddab",
+        "name": "GET Firebase State",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://women-safety-d12d5-default-rtdb.firebaseio.com/threat_detect.json",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 390,
+        "y": 300,
+        "wires": [
+            [
+                "7b2bfc2a3c9741ef"
+            ]
+        ]
+    },
+    {
+        "id": "7b2bfc2a3c9741ef",
+        "type": "function",
+        "z": "cad66e594620ddab",
+        "name": "🔍 Check if threat active",
+        "func": "// Read the full threat_detect object\nconst data = msg.payload;\n\nif (!data || data.state !== true) {\n    // Not a threat — do nothing\n    return null;\n}\n\n// Store full data for next nodes\nmsg.threatData = data;\nmsg.state       = data.state;\nmsg.lat         = data.live_location ? data.live_location.lat : null;\nmsg.lng         = data.live_location ? data.live_location.lng : null;\nmsg.accuracy    = data.live_location ? data.live_location.accuracy : null;\nmsg.mapsLink    = data.live_location ? data.live_location.maps_link : null;\nmsg.timestamp   = data.live_location ? data.live_location.timestamp : 'Unknown';\nmsg.audioUrl    = data.latest_audio  || null;\nmsg.photoUrl    = data.latest_photo  || null;\nmsg.seconds     = data.seconds_active || 0;\nmsg.lastUpload  = data.last_upload_time || 'Unknown';\n\n// Only send alert if we have at least a location\nif (!msg.lat) {\n    node.warn('No location yet');\n    return null;\n}\n\nnode.status({fill:'red', shape:'dot', text:'🚨 THREAT ACTIVE'});\nreturn msg;",
+        "outputs": 1,
+        "x": 630,
+        "y": 300,
+        "wires": [
+            [
+                "2a3e48f3807ca650"
+            ]
+        ]
+    },
+    {
+        "id": "125cd4d5d7f3928e",
+        "type": "telegram bot",
+        "botname": "Mygirllocation",
+        "usernames": "",
+        "chatids": "",
+        "baseapiurl": "",
+        "testenvironment": false,
+        "updatemode": "polling",
+        "pollinterval": 300,
+        "usesocks": false,
+        "sockshost": "",
+        "socksprotocol": "socks5",
+        "socksport": 6667,
+        "socksusername": "anonymous",
+        "sockspassword": "",
+        "bothost": "",
+        "botpath": "",
+        "localbothost": "0.0.0.0",
+        "localbotport": 8443,
+        "publicbotport": 8443,
+        "privatekey": "",
+        "certificate": "",
+        "useselfsignedcertificate": false,
+        "sslterminated": false,
+        "verboselogging": false
+    },
+    {
+        "id": "49418bae1a20d70a",
+        "type": "telegram bot",
+        "botname": "Mygirlphoto",
+        "usernames": "",
+        "chatids": "",
+        "baseapiurl": "",
+        "testenvironment": false,
+        "updatemode": "polling",
+        "pollinterval": 300,
+        "usesocks": false,
+        "sockshost": "",
+        "socksprotocol": "socks5",
+        "socksport": 6667,
+        "socksusername": "anonymous",
+        "sockspassword": "",
+        "bothost": "",
+        "botpath": "",
+        "localbothost": "0.0.0.0",
+        "localbotport": 8443,
+        "publicbotport": 8443,
+        "privatekey": "",
+        "certificate": "",
+        "useselfsignedcertificate": false,
+        "sslterminated": false,
+        "verboselogging": false
+    },
+    {
+        "id": "21398e541a4676e8",
+        "type": "telegram bot",
+        "botname": "Mygirltext",
+        "usernames": "",
+        "chatids": "",
+        "baseapiurl": "",
+        "testenvironment": false,
+        "updatemode": "polling",
+        "pollinterval": 300,
+        "usesocks": false,
+        "sockshost": "",
+        "socksprotocol": "socks5",
+        "socksport": 6667,
+        "socksusername": "anonymous",
+        "sockspassword": "",
+        "bothost": "",
+        "botpath": "",
+        "localbothost": "0.0.0.0",
+        "localbotport": 8443,
+        "publicbotport": 8443,
+        "privatekey": "",
+        "certificate": "",
+        "useselfsignedcertificate": false,
+        "sslterminated": false,
+        "verboselogging": false
+    },
+    {
+        "id": "00782acb8c3159da",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-telegrambot": "17.1.0"
+        }
+    }
+]
